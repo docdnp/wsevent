@@ -1,9 +1,7 @@
 #!/bin/bash
 PORT=${1:-8080}
 
-alias curl="docker run -it --rm --name curl alpine/curl:latest"
-
-curl \
+docker run -it --network host --rm --name wsclient-$RANDOM alpine/curl:latest \
     --no-buffer      \
     --header "Connection: Upgrade"      \
     --header "Upgrade: websocket"      \
