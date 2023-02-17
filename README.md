@@ -14,8 +14,8 @@ Start the loadbalancer and reverse proxy
 ./wsproxy.sh
 ```
 
-Start the multiple clients using the loadbalancer
+Start multiple clients using the loadbalancer
 
 ```
-./wsproxy.sh 80
+./wsclient.sh 80
 ```
