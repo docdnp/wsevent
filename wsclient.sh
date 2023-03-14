@@ -1,6 +1,6 @@
 #!/bin/bash
 PORT=${1:-8080}
-WEBPATH=${2:-echo}
+WEBPATH=${2:-events}
 
 docker run -it --network host --rm --name wsclient-$RANDOM alpine/curl:latest \
     --no-buffer      \

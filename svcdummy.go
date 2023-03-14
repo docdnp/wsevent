@@ -163,7 +163,7 @@ var flags = struct {
 	no_prod      *bool
 }{
 	serve_addr:   flag.String("serve-address", "localhost:8080", "http service serve address"),
-	serve_path:   flag.String("serve-path", "echo", "http servce path"),
+	serve_path:   flag.String("serve-path", "events", "http servce path"),
 	consume_addr: flag.String("consume-address", "", "http service serve address"),
 	consume_path: flag.String("consume-path", "consume", "http consume path"),
 	no_prod:      flag.Bool("no-produce", false, "Deactivate producing. Activate consuming"),
