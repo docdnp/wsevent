@@ -1,7 +1,34 @@
-# wsevent
+# wsevent - HTTP Event Stream Pattern
 
 This project aims to show how an event-driven architecture can be realized without complex message oriented middlewares (MoMs), by relying only on reverse proxied point-2-point connections. 
-## Scenario: Client consumes over reverse proxy
+
+## Basics
+
+There are some helper scripts (bash) that allow some convenience things like:
+
+* converting the PlantUML diagrams to SVGs (as Github's Markdown doesn't seem to support PlantUML directly)
+* using a local PlantUML Preview Server within VSCode
+
+Actually the scripts are mostly simple wrappers around the PlantUML docker images.
+
+### VSCode PlantUML Preview
+
+To start the Preview Server for VSCode, do as follows:
+```
+docs/puml2preview
+```
+### Convert PlantUML diagrams to SVGs
+
+To convert the diagrams to SVG figures, do as follows:
+```
+docs/puml2svg
+```
+
+## Scenarios
+
+The following sections shall visualize the basic concepts behind the pattern and allow you to test these concepts.
+
+### Scenario: Client consumes over reverse proxy
 
 The basic idea is that an event consumer relies on a URL for a given type of events.
 Event Streams are unidirectional producer-driven messages.
@@ -30,7 +57,7 @@ Start multiple clients using the loadbalancer
 ./wsclient.sh 80
 ```
 
-## Scenario: Producer -> ProxyCLient -> Consumer
+### Scenario: Producer -> ProxyCLient -> Consumer
 
 The second scenario shows how different service instances can be chained while they still behave as loosley coupled as possible.
 For the sake of simplicity we simulate downstream services in form of simple event proxies passing events directly and unchanged to their consumers.
