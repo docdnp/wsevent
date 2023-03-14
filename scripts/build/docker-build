@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-IMAGE=${1:-wsevent}
+IMAGE=${1:-thednp/wsevent}
 TAG=${2:-latest}
 
-IMAGE=thednp/wsevent:$TAG
+IMAGE=$IMAGE:$TAG
 
 docker build -f scripts/build/Dockerfile -t $IMAGE .
 

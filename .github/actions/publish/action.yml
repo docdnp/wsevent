@@ -9,7 +9,7 @@ inputs:
     required: true
   docker_name:  # id of input
     description: 'The docker image name'
-    default: wsevent
+    default: thednp/wsevent
     required: true
   docker_tag:
     description: 'Upload image under additional tag (e.g. latest).'
@@ -51,7 +51,7 @@ runs:
       run: |
         echo "Building containter image...";
         export PATH=$PATH:${{ github.action_path }};
-        ./scripts/build/docker-build ${{ inputs.docker_name }} ${{ github.docker_tag }} \
+        ./scripts/build/docker-build ${{ inputs.docker_name }} ${{ github.ref_name }} \
           || error "Building docker image failed."
       shell: bash
 
