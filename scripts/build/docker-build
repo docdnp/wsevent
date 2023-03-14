@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-IMGNAME=${1:-wsevent}
+IMAGE=${1:-wsevent}
 TAG=${2:-latest}
 
-docker build -f scripts/build/Dockerfile -t $IMGNAME:$TAG .
+IMAGE=thednp/wsevent:$TAG
+
+docker build -f scripts/build/Dockerfile -t $IMAGE .
+
+echo $IMAGE > /tmp/IMAGE

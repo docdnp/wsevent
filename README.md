@@ -35,7 +35,7 @@ A docker image can be built as follows:
 scripts/build/docker-build
 ```
 
-This script creates the image `wsevent:latest` by default.
+This script creates the image `thednp/wsevent:latest` by default.
 If you want to change the name and/or the tag to be used, call:
 
 ```
