@@ -6,6 +6,9 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -13,14 +16,12 @@ import (
 	"github.com/textileio/go-threads/broadcast"
 )
 
-var b broadcast.Broadcaster
-
-func produceDummyEvents(addr string) {
-
+// EventGenerator creates random strings and broadcasts them to any
+// connected channel (via broadcast.Broadcaster)
+func EventGenerator(bc *broadcast.Broadcaster, serve_address string) {
 	rand.Seed(time.Now().UnixNano())
 
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
 	RandStringRunes := func(n int) string {
 		b := make([]rune, n)
 		for i := range b {
@@ -32,44 +33,156 @@ func produceDummyEvents(addr string) {
 	i := 0
 	for {
 		time.Sleep(100 * time.Millisecond)
-		b.Send(strconv.Itoa(i) + ": " + addr + ": " + RandStringRunes(10) + "\n")
+		message := strconv.Itoa(i) + ": " + serve_address + ": " + RandStringRunes(10) + "\n"
+		log.Print("Created dummy message: " + message)
+		bc.Send(message)
 		i += 1
 	}
 }
 
-var addr = flag.String("addr", "localhost:8080", "http service address")
-
-var upgrader = websocket.Upgrader{} // use default options
-
-func serveClient(w http.ResponseWriter, r *http.Request) {
-	l := b.Listen()
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	defer c.Close()
-	defer l.Discard()
+// EventConsumer retries connecting to a given event source, processes
+// incoming events and broadcasts the to any connected channel
+// (via broadcast.Broadcaster)
+func EventConsumer(bc *broadcast.Broadcaster, address string, path string) {
+	is_running := true
 	for {
-		msg := <-l.Channel()
-		msgPayload, ok := msg.(string)
-		if !ok {
-			log.Print("warning: skipping unknown data")
-			continue
+		retry := make(chan struct{})
+		exitnow := make(chan struct{})
+		go func() {
+			log.Println("Reconnect.. Running? " + strconv.FormatBool(is_running))
+			if !is_running {
+				close(exitnow)
+			}
+			defer func() { close(retry) }()
+
+			done := make(chan struct{})
+			interrupt := make(chan os.Signal, 1)
+			cancelled := make(chan os.Signal, 1)
+			signal.Notify(interrupt, os.Interrupt)
+
+			go func() {
+				sig := <-interrupt
+				is_running = false
+				cancelled <- sig
+			}()
+
+			u := url.URL{Scheme: "ws", Host: address, Path: path}
+			log.Printf("connecting to %s", u.String())
+
+			c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+
+			if err != nil {
+				log.Println("dial:", err)
+				return
+			}
+			defer c.Close()
+
+			go func(c *websocket.Conn) {
+				defer close(done)
+				for is_running {
+					_, message, err := c.ReadMessage()
+					if err != nil {
+						log.Println("read:", err)
+						return
+					}
+					bc.Send(string(message))
+					log.Printf("recv: (%v) %s", is_running, message)
+				}
+				err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+				if err != nil {
+					log.Println("write close:", err)
+					return
+				}
+			}(c)
+
+			for {
+				select {
+				case <-done:
+					return
+				case <-cancelled:
+					log.Println("interrupt")
+					select {
+					case <-done:
+					case <-time.After(time.Second):
+					}
+					close(exitnow)
+					return
+				}
+			}
+		}()
+		select {
+		case <-retry:
+			log.Println("Retrying to reconnect to " + address + "/" + path + ".")
+			time.Sleep(time.Second)
+		case <-exitnow:
+			log.Println("Stopping service.")
+			os.Exit(0)
 		}
-		err = c.WriteMessage(websocket.TextMessage, []byte(msgPayload))
+
+	}
+}
+
+// EventBroadcaster serves multiple websocket connections and passes incoming
+// events (received through broadcast.Broadcaster) to every connected client.
+func EventBroadcaster(b *broadcast.Broadcaster) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := b.Listen()
+
+		var upgrader = websocket.Upgrader{} // use default options
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		c, err := upgrader.Upgrade(w, r, nil)
+
 		if err != nil {
-			log.Println("write:", err)
-			break
+			log.Print("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		defer l.Discard()
+
+		for {
+			msg := <-l.Channel()
+			msgPayload, ok := msg.(string)
+			if !ok {
+				log.Print("warning: skipping unknown data")
+				continue
+			}
+			err = c.WriteMessage(websocket.TextMessage, []byte(msgPayload))
+			if err != nil {
+				log.Println("write:", err)
+				break
+			}
 		}
 	}
 }
 
+var flags = struct {
+	serve_addr   *string
+	serve_path   *string
+	consume_addr *string
+	consume_path *string
+	no_prod      *bool
+}{
+	serve_addr:   flag.String("serve-address", "localhost:8080", "http service serve address"),
+	serve_path:   flag.String("serve-path", "echo", "http servce path"),
+	consume_addr: flag.String("consume-address", "", "http service serve address"),
+	consume_path: flag.String("consume-path", "consume", "http consume path"),
+	no_prod:      flag.Bool("no-produce", false, "Deactivate producing. Activate consuming"),
+}
+
 func main() {
 	flag.Parse()
-	fmt.Println("Hello, World!")
-	go produceDummyEvents(*addr)
-	http.HandleFunc("/echo", serveClient)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	var b broadcast.Broadcaster
+
+	if !*flags.no_prod {
+		fmt.Println("Starting as producer...")
+		go EventGenerator(&b, *flags.serve_addr)
+	} else {
+		fmt.Println("Starting as proxy service...")
+		fmt.Println("Consuming from: " + *flags.consume_addr + "/" + *flags.serve_path)
+		go EventConsumer(&b, *flags.consume_addr, "/"+*flags.consume_path)
+	}
+
+	fmt.Println("Serving on: " + *flags.serve_addr + "/" + *flags.serve_path)
+	http.HandleFunc("/"+*flags.serve_path, EventBroadcaster(&b))
+	log.Fatal(http.ListenAndServe(*flags.serve_addr, nil))
 }
