@@ -8,20 +8,38 @@ There are some helper scripts (bash) that allow some convenience things like:
 
 * converting the PlantUML diagrams to SVGs (as Github's Markdown doesn't seem to support PlantUML directly)
 * using a local PlantUML Preview Server within VSCode
+* build docker images
+* ... and maybe more
 
 Actually the scripts are mostly simple wrappers around the PlantUML docker images.
 
 ### VSCode PlantUML Preview
 
 To start the Preview Server for VSCode, do as follows:
+
 ```
-docs/puml2preview
+scripts/docs/puml2preview
 ```
 ### Convert PlantUML diagrams to SVGs
 
 To convert the diagrams to SVG figures, do as follows:
+
 ```
-docs/puml2svg
+scripts/docs/puml2svg
+```
+### Build a minimal and secure docker image
+
+A docker image can be built as follows:
+
+```
+scripts/build/docker-build
+```
+
+This script creates the image `wsevent:latest` by default.
+If you want to change the name and/or the tag to be used, call:
+
+```
+scripts/build/docker-build <YOUR_FAVORITE_IMAGE_NAME> <THE_TAG_YOU_LIKE>
 ```
 
 ## Scenarios
@@ -40,21 +58,21 @@ The following scenario shall help to understand this concept and also provide so
 Start three dummy event producer services on ports 8080 to 8081:
 
 ```
-go run svcdummy -serve-address localhost:8080 &
-go run svcdummy -serve-address localhost:8081 &
-go run svcdummy -serve-address localhost:8082 &
+go run wsevent-service.go -serve-address localhost:8080 &
+go run wsevent-service.go -serve-address localhost:8081 &
+go run wsevent-service.go -serve-address localhost:8082 &
 ```
 
 Start the loadbalancer and reverse proxy
 
 ```
-./wsproxy.sh
+scripts/wsproxy
 ```
 
 Start multiple clients using the loadbalancer
 
 ```
-./wsclient.sh 80
+scripts/wsclient 80
 ```
 
 ### Scenario: Producer -> ProxyCLient -> Consumer
@@ -70,7 +88,7 @@ Start one event producing service instance
 * that writes random strings on `ws://localhost:8080/events`:
 
 ```
-go run svcdummy
+go run wsevent-service.go
 ```
 
 Start one event producing service instance 
@@ -79,7 +97,7 @@ Start one event producing service instance
 * proxying to `ws://localhost:9090/proxy-events`
 
 ```
-go run svcdummy -consume-path events -consume-address localhost:8080 -serve-address localhost:9090 -serve-path proxy-events -no-produce
+go run wsevent-service.go -consume-path events -consume-address localhost:8080 -serve-address localhost:9090 -serve-path proxy-events -no-produce
 ```
 
 Start a second service instance that acts as a simple event forwarder
@@ -88,10 +106,10 @@ Start a second service instance that acts as a simple event forwarder
 * proxying to `ws://localhost:9999/the-end`
 
 ```
-go run svcdummy -consume-path proxy-events -consume-address localhost:9090 -serve-address localhost:9999 -serve-path the-end -no-produce
+go run wsevent-service.go -consume-path proxy-events -consume-address localhost:9090 -serve-address localhost:9999 -serve-path the-end -no-produce
 ```
 
 Start the end consumer:
 ```
-./wsclient.sh 9999
+scripts/wsclient 9999 the-end
 ```

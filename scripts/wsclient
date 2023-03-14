@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 PORT=${1:-8080}
 WEBPATH=${2:-events}
 
