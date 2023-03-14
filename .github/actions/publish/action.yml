@@ -13,7 +13,7 @@ inputs:
     required: true
   docker_tag:
     description: 'Upload image under additional tag (e.g. latest).'
-    default: ""
+    default: "latest"
     required: false
 
 runs:
