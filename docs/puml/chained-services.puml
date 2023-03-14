@@ -1,0 +1,21 @@
+@startuml chained-services
+node "Event Producer" as ep
+node "Event Proxy 1" as ep1
+node "Event Proxy 2" as ep2
+node "Event Consumer" as ec <<curl>>
+
+node "Event Consumer" as ec <<curl>>
+
+ep --U-> ep1
+note on link
+ws://localhost:8080/events
+end note
+ep1--R-> ep2
+note on link
+ws://localhost:9090/proxy-events
+end note
+ep2 --D-> ec
+note on link
+ws://localhost:9999/the-end
+end note
+@enduml

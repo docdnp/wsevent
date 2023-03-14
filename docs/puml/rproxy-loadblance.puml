@@ -1,0 +1,27 @@
+@startuml rproxy-loadbalance
+node "Event Producer 1" as ep1
+node "Event Producer 2" as ep2
+node "Event Producer 3" as ep3
+
+node "Load-Balancer and Reverse Proxy" as rproxy <<nginx>>
+
+node "Event Consumer" as ec <<curl>>
+
+ep1 --U-> rproxy
+note on link
+ws://localhost:8080/events
+end note
+ep2 --U-> rproxy
+note on link
+ws://localhost:8081/events
+end note
+ep3 --U-> rproxy
+note on link
+ws://localhost:8082/events
+end note
+rproxy --U-> ec
+note on link
+Events over Websockets
+ws://localhost:80/events
+end note
+@enduml
