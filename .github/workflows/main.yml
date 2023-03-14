@@ -3,7 +3,7 @@ run-name: Publishing docker images
 on:
   # release:
   #   types: [published]
-  on: push
+  push
 jobs:
   Build-and-publish-for-amd64:
     runs-on: ubuntu-latest
