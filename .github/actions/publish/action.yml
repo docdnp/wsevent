@@ -19,22 +19,22 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Prepare checking tag name
-      uses: actions-ecosystem/action-regex-match@v2
-      id: regex-match
-      with:
-        text: ${{ github.ref_name }}
-        regex: '^v\d+\.\d+\.\d+$'
+    # - name: Prepare checking tag name
+    #   uses: actions-ecosystem/action-regex-match@v2
+    #   id: regex-match
+    #   with:
+    #     text: ${{ github.ref_name }}
+    #     regex: '^v\d+\.\d+\.\d+$'
 
-    - name: Check tag name
-      id: check-tag-name
-      run: |
-        echo "Checking tag name: Did regex match? => [${{ steps.regex-match.outputs.match }}]";
-        export PATH=$PATH:${{ github.action_path }};
-        REMATCH="${{ steps.regex-match.outputs.match }}";
-        REFNAME="${{ github.ref_name }}";
-        [ -n "$REMATCH" ] || error "Tag '$REFNAME' has invalid format." 
-      shell: bash
+    # - name: Check tag name
+    #   id: check-tag-name
+    #   run: |
+    #     echo "Checking tag name: Did regex match? => [${{ steps.regex-match.outputs.match }}]";
+    #     export PATH=$PATH:${{ github.action_path }};
+    #     REMATCH="${{ steps.regex-match.outputs.match }}";
+    #     REFNAME="${{ github.ref_name }}";
+    #     [ -n "$REMATCH" ] || error "Tag '$REFNAME' has invalid format." 
+    #   shell: bash
 
     - name: Login to docker hub
       id: login-to-docker-hub
