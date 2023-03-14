@@ -24,7 +24,7 @@ ENV GOPATH ""
 RUN go mod download
 RUN go mod verify
 
-RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /go/bin/svcdummy
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /go/bin/wsevent-service
 
 ############################
 # STEP 2 build a small image
@@ -34,8 +34,8 @@ FROM scratch
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 # Copy our static executable.
-COPY --from=builder /go/bin/svcdummy /go/bin/wsevent-service
+COPY --from=builder /go/bin/wsevent-service /go/bin/wsevent-service
 # Use an unprivileged user.
 USER appuser:appuser
 # Run the binary.
-ENTRYPOINT ["/go/bin/svcdummy"]
+ENTRYPOINT ["/go/bin/wsevent-service"]
