@@ -64,7 +64,7 @@ runs:
         docker push $IMAGE \
           || error "Pushing $IMAGE to docker registry failed."
         [ -z "${{ inputs.docker_tag }}" ] || {
-          NEWIMAGE=$(echo $IMAGE | sed 's/:.*/:'${{ inputs.tag }}'/');
+          NEWIMAGE=$(echo $IMAGE | sed 's/:.*/:'${{ inputs.docker_tag }}'/');
           docker tag $IMAGE $NEWIMAGE \
             || error "Couldn't add tag for $IMAGE => $NEWIMAGE";
           docker push $NEWIMAGE \
