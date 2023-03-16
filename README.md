@@ -42,6 +42,11 @@ If you want to change the name and/or the tag to be used, call:
 scripts/build/docker-build <YOUR_FAVORITE_IMAGE_NAME> <THE_TAG_YOU_LIKE>
 ```
 
+The latest docker image can be found under https://hub.docker.com/r/thednp/wsevent.
+For further information, call:
+
+```docker run --rm -it --name wsevent thednp/wsevent --help``` 
+
 ## Scenarios
 
 The following sections shall visualize the basic concepts behind the pattern and allow you to test these concepts.

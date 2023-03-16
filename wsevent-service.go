@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -139,6 +140,12 @@ func EventBroadcaster(b *broadcast.Broadcaster) func(http.ResponseWriter, *http.
 		defer c.Close()
 		defer l.Discard()
 
+		hostname, err := os.Hostname()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
 		for {
 			msg := <-l.Channel()
 			msgPayload, ok := msg.(string)
@@ -146,32 +153,77 @@ func EventBroadcaster(b *broadcast.Broadcaster) func(http.ResponseWriter, *http.
 				log.Print("warning: skipping unknown data")
 				continue
 			}
-			err = c.WriteMessage(websocket.TextMessage, []byte(msgPayload))
+			err = c.WriteMessage(websocket.TextMessage, []byte(hostname+"<- "+msgPayload))
 			if err != nil {
-				log.Println("write:", err)
+				log.Println("write: ", err)
 				break
 			}
 		}
 	}
 }
 
-var flags = struct {
-	serve_addr   *string
-	serve_path   *string
-	consume_addr *string
-	consume_path *string
-	no_prod      *bool
-}{
-	serve_addr:   flag.String("serve-address", "localhost:8080", "http service serve address"),
-	serve_path:   flag.String("serve-path", "events", "http servce path"),
-	consume_addr: flag.String("consume-address", "", "http service serve address"),
-	consume_path: flag.String("consume-path", "consume", "http consume path"),
-	no_prod:      flag.Bool("no-produce", false, "Deactivate producing. Activate consuming"),
+// CliArgs are the application's CLI arguments
+type CliArgs struct {
+	serve_endpoint   *string
+	serve_addr       *string
+	serve_path       *string
+	consume_endpoint *string
+	consume_addr     *string
+	consume_path     *string
+	no_prod          *bool
+}
+
+// ArgumentParser returns the application's configuration.
+// First environment variables are used. If CLI args exist
+// they superseed the environment
+func ArgumentParser() CliArgs {
+	fromEnv := func(envvar_name string, default_val interface{}) interface{} {
+		val, ok := os.LookupEnv(envvar_name)
+		if ok {
+			switch default_val.(type) {
+			case bool:
+				return os.Getenv(envvar_name) != ""
+			case string:
+				return val
+			default:
+				return ""
+			}
+		} else {
+			return default_val
+		}
+	}
+
+	flags := CliArgs{
+		serve_endpoint:   flag.String("serve", fromEnv("SERVE_ENDPOINT", "").(string), "http service endpoint (address plus path)"),
+		serve_addr:       flag.String("serve-address", fromEnv("SERVE_ADDRESS", "localhost:8080").(string), "http service serve address"),
+		serve_path:       flag.String("serve-path", fromEnv("SERVE_PATH", "events").(string), "http servce path"),
+		consume_endpoint: flag.String("consume", fromEnv("CONSUME_ENDPOINT", "").(string), "http service endpoint (address plus path)"),
+		consume_addr:     flag.String("consume-address", fromEnv("CONSUME_ADDRESS", "").(string), "http service serve address"),
+		consume_path:     flag.String("consume-path", fromEnv("CONSUME_PATH", "").(string), "http consume path"),
+		no_prod:          flag.Bool("no-produce", fromEnv("NO_PRODUCE", false).(bool), "Deactivate producing. Activate consuming"),
+	}
+
+	caps2args := func(caps [][]string, args ...*string) {
+		if len(caps) == 0 || len(caps[0]) != len(args)+1 {
+			return
+		}
+		for i, ptr := range args {
+			*ptr = caps[0][i+1]
+		}
+	}
+
+	flag.Parse()
+
+	r := regexp.MustCompile(`^(.*?)/(.*)?$`)
+	caps2args(r.FindAllStringSubmatch(*flags.serve_endpoint, -1), flags.serve_addr, flags.serve_path)
+	caps2args(r.FindAllStringSubmatch(*flags.consume_endpoint, -1), flags.consume_addr, flags.consume_path)
+
+	return flags
 }
 
 func main() {
-	flag.Parse()
 	var b broadcast.Broadcaster
+	flags := ArgumentParser()
 
 	if !*flags.no_prod {
 		fmt.Println("Starting as producer...")
