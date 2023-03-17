@@ -37,5 +37,6 @@ COPY --from=builder /etc/group /etc/group
 COPY --from=builder /go/bin/wsevent-service /go/bin/wsevent-service
 # Use an unprivileged user.
 USER appuser:appuser
+EXPOSE 8080
 # Run the binary.
 ENTRYPOINT ["/go/bin/wsevent-service"]
